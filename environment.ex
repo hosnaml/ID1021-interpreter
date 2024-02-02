@@ -50,5 +50,39 @@ defmodule Eager do
   end
 
 
+  def eval_match(:ignore, _, env) do
+    {:ok, env}
+  end
+
+  def eval_match({:atm, id}, id, env) do
+    {:ok, env}
+  end
+
+  def eval_match({:var, id}, str, env) do
+    case EnvList.lookup(env, id) do
+      nil ->
+        {:ok, EnvList.add(env, id, str)}
+      {_, ^str} ->
+        {:ok, env}
+      {_, _} ->
+        :fail
+    end
+  end
+
+  def eval_match({:cons, hp, tp}, {hs, ts}, env) do
+    case eval_match(hp, hs, env) do
+      :fail ->
+        :fail
+      {:ok, env} ->
+        eval_match(tp, ts, env)
+    end
+  end
+
+
+  def eval_match(_, _, _) do
+    :fail
+  end
+
+
 
 end
