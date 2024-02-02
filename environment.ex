@@ -49,6 +49,16 @@ defmodule Eager do
     end
   end
 
+  #?To handle case expression.
+  def eval_expr({:case, expr, cls}, ...) do
+    case eval_expr(..., ...) do
+      ... ->
+        ...
+      ... ->
+        eval_cls(..., ..., ...)
+    end
+  end
+
 
   def eval_match(:ignore, _, env) do
     {:ok, env}
@@ -83,6 +93,33 @@ defmodule Eager do
     :fail
   end
 
+  def eval_scope(pattern, env) do
+    EnvList.remove(extract_vars(pattern), env)
+  end
+
+  def eval_seq([exp], env) do
+    eval_expr(exp, env)
+  end
+
+  def eval_seq([{:match, pattern, exp} | seq], env) do
+    case eval_expr(exp, env) do
+      :error ->
+        :error
+      {:ok, str} ->
+        env = eval_scope(pattern, env)
+
+        case eval_match(pattern, str, env ) do
+          :fail ->
+            :error
+          {:ok, env} ->
+            eval_seq(seq, env)
+        end
+    end
+  end
+
+  def extract_vars() do
+
+  end
 
 
 end
