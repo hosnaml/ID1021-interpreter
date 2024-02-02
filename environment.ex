@@ -50,14 +50,30 @@ defmodule Eager do
   end
 
   #?To handle case expression.
-  def eval_expr({:case, expr, cls}, ...) do
-    case eval_expr(..., ...) do
-      ... ->
-        ...
-      ... ->
-        eval_cls(..., ..., ...)
+  def eval_expr({:case, expr, cls}, env) do
+    case eval_expr(expr, env) do
+      :error ->
+        :error
+      {:ok, str} ->
+        eval_cls(cls, str, env)
     end
   end
+
+  def eval_cls([], _, _, _) do
+    :error
+  end
+
+  def eval_cls([{:clause, ptr, seq} | cls], str, env) do
+
+    case eval_match(ptr,str, eval_scope(ptr,env)) do
+      :fail ->
+        eval_cls(cls, str, env)
+      {:ok, env} ->
+        eval_seq(..., ...)
+    end
+  end
+
+
 
 
   def eval_match(:ignore, _, env) do
