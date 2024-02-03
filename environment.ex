@@ -14,11 +14,43 @@ defmodule Env do
     EnvList.remove()
   end
 
-# {:atm, :a}
-# {{:atm, :a}, {{:var, x}, {:atm, :b}}}
+  def closure(keys, env) do
+    closure_recursive(keys, env, [])
+  end
 
-#{:var, x}
+  def closure_recursive([], _, acc), do: [acc]
+  def closure_recursive([key|rest], env, acc) do
+    case lookup(env, key) do
+      nil ->
+        :error
+      value ->
+        closure_recursive(rest, env, [{key, value} | acc])
+    end
+  end
 
+
+
+  def args(pars, args, env) do
+    #list.zip addes the list as a tuple to the environment.
+    list.zip([pars,args]) ++ env
+  end
+
+
+end
+
+defmodule Prgm do
+  def append() do
+    {[:x, :y],
+      [{:case, {:var, :x},
+        [{:clause, {:atm, []}, [{:var, :y}]},
+         {:clause, {:cons, {:var, :hd}, {:var, :tl}},
+          [{:cons,
+            {:var, :hd},
+            {:apply, {:fun, :append}, [{:var, :tl}, {:var, :y}]}}]
+          }]
+      }]
+    }
+  end
 end
 
 defmodule Eager do
@@ -73,7 +105,34 @@ defmodule Eager do
     end
   end
 
+  def eval_expr({:lambda, par, free, seq}, env) do
+    case EnvList.closure(free, env) do
+      :error ->
+        :error
+      closure ->
+        {:ok, {:closure, par, seq, closure}}
+    end
+  end
 
+  def eval_expr({:apply, expr, args}, env) do
+    case eval_expr(expr, env) do
+      :error ->
+        :error
+      {:ok, {:closure, par, seq, closure}} ->
+        case eval_args(args, env)  do
+          :error ->
+            :error
+          {:ok, strs} ->
+            env = Env.args(par, strs, closure)
+            eval_seq(seq, env)
+        end
+    end
+  end
+
+  def eval_expr({:fun, id}, env)  do
+    {par, seq} = apply(Prgm, id, [])
+    {:ok,  {:closure, par, seq, Env.new()}}
+ end
 
 
   def eval_match(:ignore, _, env) do
@@ -133,9 +192,26 @@ defmodule Eager do
     end
   end
 
-  def extract_vars() do
+  @spec extract_vars(pattern) :: [variable]
 
+  def extract_vars(pattern) do
+    extract_vars(pattern, [])
   end
+
+  @spec extract_vars(pattern, [variable]) :: [variable]
+
+  def extract_vars({:atm, _}, vars) do vars end
+  def extract_vars(:ignore, vars) do vars end
+  def extract_vars({:var, var}, vars) do
+    [var | vars]
+  end
+  def extract_vars({:cons, head, tail}, vars) do
+    extract_vars(tail, extract_vars(head, vars))
+  end
+
+
+
+
 
 
 end
